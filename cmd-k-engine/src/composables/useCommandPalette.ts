@@ -246,11 +246,36 @@ export function useCommandPalette() {
     ]
   })
 
+   /**
+   * Creates the breadcrumb labels used by the UI.
+   *
+   * Example:
+   *
+   * menuStack:
+   *   [Theme, Colors]
+   *
+   * breadcrumbs:
+   *   ["Theme", "Colors"]
+   *
+   * The component can render:
+   *
+   *   Commands / Theme / Colors
+   */
+
   const breadcrumbs = computed(() => {
     return menuStack.value.map(
       (command) => command.label,
     )
   })
+
+    /**
+   * Adds a new command to the palette.
+   *
+   * We use the command's ID as its unique identity.
+   *
+   * If a command with that ID already exists,
+   * replace it instead of creating a duplicate.
+   */
 
   function register(command: Command) {
     const existingIndex =
@@ -270,6 +295,13 @@ export function useCommandPalette() {
     commands.value.push(command)
   }
 
+  /**
+   * Removes a command by ID.
+   *
+   * Example:
+   *
+   * palette.unregister('settings')
+   */
   function unregister(id: string) {
     commands.value =
       commands.value.filter(
@@ -278,6 +310,12 @@ export function useCommandPalette() {
       )
   }
 
+  /**
+   * Opens the palette.
+   *
+   * We reset the navigation state every time
+   * the palette opens so the user starts fresh.
+   */
   function open() {
     isOpen.value = true
     reset()
@@ -295,12 +333,33 @@ export function useCommandPalette() {
     }
   }
 
+  /**
+   * Resets temporary UI state.
+   *
+   * This does NOT remove registered commands.
+   *
+   * It only resets:
+   *
+   * - search text
+   * - selected item
+   * - submenu location
+   */
   function reset() {
     query.value = ''
     selectedIndex.value = 0
     menuStack.value = []
   }
 
+   /**
+   * Moves the highlighted command down.
+   *
+   * Example:
+   *
+   * 0 → 1 → 2 → 0
+   *
+   * The modulo operator (%) makes navigation
+   * wrap back to the beginning.
+   */
   function moveDown() {
     const count =
       filteredCommands.value.length
@@ -314,6 +373,15 @@ export function useCommandPalette() {
       count
   }
 
+  /**
+   * Moves the highlighted command up.
+   *
+   * Example:
+   *
+   * 2 → 1 → 0 → 2
+   *
+   * Again, modulo lets us wrap around.
+   */
   function moveUp() {
     const count =
       filteredCommands.value.length
@@ -327,10 +395,22 @@ export function useCommandPalette() {
       count
   }
 
+  /**
+   * Handles pressing Enter.
+   *
+   * There are two possible behaviors:
+   *
+   * 1. The command has children
+   *    → enter the submenu.
+   *
+   * 2. The command has an action
+   *    → execute it and close the palette.
+   */
   function enter() {
     const command =
       selectedCommand.value
 
+    // Nothing selected
     if (!command) {
       return
     }
