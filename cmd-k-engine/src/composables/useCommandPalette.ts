@@ -8,6 +8,20 @@ import {
 
 import type { Command } from '@/types/command'
 
+/**
+ * Determines whether a search query "fuzzy matches" some text.
+ *
+ * Example:
+ *
+ *   query = "acct"
+ *   text  = "Account Settings"
+ *
+ * The letters a → c → c → t appear in order,
+ * so this returns true.
+ *
+ * They don't need to be next to each other.
+ */
+
 function fuzzyMatch(
   query: string,
   text: string,
@@ -47,6 +61,19 @@ function fuzzyMatch(
   return false
 }
 
+/**
+ * Determines whether a command should appear
+ * in the current search results.
+ *
+ * We search against more than just the label:
+ *
+ * - label
+ * - description
+ * - keywords
+ *
+ * This means a command can be discovered using
+ * words that aren't actually displayed in its title.
+ */
 function commandMatches(
   command: Command,
   query: string,
@@ -60,39 +87,132 @@ function commandMatches(
   return fuzzyMatch(query, searchText)
 }
 
+/**
+ * Main state and behavior for the command palette.
+ *
+ * The component should mostly be responsible for
+ * rendering this state.
+ *
+ * This composable is responsible for:
+ *
+ * - opening / closing
+ * - command registration
+ * - searching
+ * - keyboard navigation
+ * - nested menus
+ * - executing commands
+ */
 export function useCommandPalette() {
-  const isOpen = ref(false)
-
-  const query = ref('')
-
-  const commands = ref<Command[]>([])
-
-  const selectedIndex = ref(0)
-
   /**
-   * Commands representing the current
-   * submenu path.
+   * Whether the palette is currently visible.
    *
    * Example:
    *
+   * false → palette closed
+   * true  → palette open
+   */
+  const isOpen = ref(false)
+
+
+  /**
+   * The text currently typed into the search box.
+   *
+   * Example:
+   *
+   * ""
+   * "set"
+   * "dark"
+   */
+  const query = ref('')
+
+  /**
+   * All root-level commands registered
+   * by the application.
+   *
+   * This starts empty and App.vue can add commands
+   * using palette.register(...).
+   */
+  const commands = ref<Command[]>([])
+
+  /**
+   * Which command is currently highlighted.
+   *
+   * Example:
+   *
+   * 0 = first command
+   * 1 = second command
+   * 2 = third command
+   *
+   * This is what ArrowUp / ArrowDown change.
+   */
+  const selectedIndex = ref(0)
+
+  /**
+   * Keeps track of the user's current position
+   * in nested menus.
+   *
+   * At the root:
+   *
    * []
+   *
+   * Inside "Theme":
    *
    * [Theme]
    *
-   * [Theme, Editor]
+   * Inside "Theme -> Colors":
+   *
+   * [Theme, Colors]
+   *
+   * This lets us implement Backspace navigation.
    */
   const menuStack = ref<Command[]>([])
 
+  /**
+   * Figures out which commands should be displayed
+   * BEFORE search is applied.
+   *
+   * At the root, we return the top-level commands.
+   *
+   * Inside a submenu, we return that command's children.
+   */
   const currentCommands = computed(() => {
+    // Get the last item in the menu stack.
+    //
+    // If we're in:
+    //
+    // [Theme, Colors]
+    //
+    // then "Colors" is the current parent.
     const parent =
       menuStack.value[
         menuStack.value.length - 1
       ]
 
+    // If there is a parent, display its children.
+    //
+    // Otherwise we're at the root, so display the
+    // normal top-level commands.
     return parent?.children ??
       commands.value
   })
 
+  /**
+   * Applies the user's search query to the
+   * commands we're currently viewing.
+   *
+   * Example:
+   *
+   * currentCommands:
+   *   Settings
+   *   Projects
+   *   Help
+   *
+   * query:
+   *   "set"
+   *
+   * result:
+   *   Settings
+   */
   const filteredCommands = computed(() => {
     return currentCommands.value.filter(
       (command) =>
@@ -103,6 +223,23 @@ export function useCommandPalette() {
     )
   })
 
+
+  /**
+   * Converts the selectedIndex number into
+   * the actual selected command.
+   *
+   * Example:
+   *
+   * selectedIndex = 1
+   *
+   * filteredCommands = [
+   *   Dashboard,
+   *   Settings,
+   *   Help
+   * ]
+   *
+   * selectedCommand = Settings
+   */
   const selectedCommand = computed(() => {
     return filteredCommands.value[
       selectedIndex.value
