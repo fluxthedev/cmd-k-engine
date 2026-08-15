@@ -415,6 +415,12 @@ export function useCommandPalette() {
       return
     }
 
+    /**
+     * If the command has children, it isn't
+     * an action we execute yet.
+     *
+     * Instead, move into that submenu.
+     */
     if (command.children?.length) {
       menuStack.value.push(command)
       query.value = ''
@@ -422,26 +428,49 @@ export function useCommandPalette() {
       return
     }
 
+    /**
+     * Otherwise this is a normal command.
+     *
+     * action() may be synchronous or async,
+     * so we don't care which one it is here.
+     */
     if (command.action) {
       void command.action()
+      // The palette is no longer needed
+      // after executing a command.
       close()
     }
   }
 
   function back() {
+    // No submenu to go back from
     if (!menuStack.value.length) {
       close()
       return
     }
 
+    // Remove current submenu
     menuStack.value.pop()
+
+    // Clear any search from submenu
     query.value = ''
+
+    // Start the previous menu at it's first item
     selectedIndex.value = 0
   }
+
+  /** 
+   * Global keyboard handler
+   * 
+   * This is intentionally inside the composable keyboard behavior is part of the 
+   * logic and not UI
+   */
 
   function handleKeydown(
     event: KeyboardEvent,
   ) {
+
+    // Determines whether we are on MacOS, Mac is cmd and Linux/Windows is ctrl
     const modifier =
       /Mac|iPhone|iPad|iPod/i.test(
         navigator.platform,
@@ -453,15 +482,19 @@ export function useCommandPalette() {
       modifier &&
       event.key.toLowerCase() === 'k'
     ) {
+      // Prevent the browser from handling the keyboard shortcut
       event.preventDefault()
       toggle()
       return
     }
 
+
+    //If modal isn't open then the other keyboard commands shouldn't be handled
     if (!isOpen.value) {
       return
     }
 
+    // Once open, map standard keyboard controls to our state functionns, this prevents the browser to control the keys pressed
     switch (event.key) {
       case 'Escape':
         event.preventDefault()
@@ -478,6 +511,7 @@ export function useCommandPalette() {
         moveUp()
         break
 
+      // Execute selected command or enter its submenu
       case 'Enter':
         event.preventDefault()
         enter()
@@ -492,6 +526,23 @@ export function useCommandPalette() {
     }
   }
 
+  /**
+   * Make sure the seleced index remains valid whenever the filtering list changes.
+   * 
+   * Example:
+   * 
+  *    Before Searching: 
+  * 
+  *    Dashboard
+  *    Settings
+  *    Help      <-- Selected index = 2
+  * 
+  *    User searches "set"
+  * 
+  *    There is no longer an index of 2
+  * 
+  *    The watcher moves the selection back to a valid index
+   */
   watch(
     filteredCommands,
     () => {
@@ -507,6 +558,8 @@ export function useCommandPalette() {
     },
   )
 
+
+  // Look for keyboard events when the component is mounted
   onMounted(() => {
     window.addEventListener(
       'keydown',
@@ -514,6 +567,7 @@ export function useCommandPalette() {
     )
   })
 
+  // stop looking when it is unmounted
   onUnmounted(() => {
     window.removeEventListener(
       'keydown',
