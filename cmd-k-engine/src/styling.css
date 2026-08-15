@@ -104,3 +104,159 @@ kbd {
 .hero button:hover {
   background: #1d4ed8;
 }
+
+.palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+
+  padding: 12vh 1rem;
+
+  background: rgb(0 0 0 / 45%);
+
+  backdrop-filter: blur(4px);
+}
+
+.palette {
+  width: min(650px, 100%);
+
+  overflow: hidden;
+
+  border-radius: 14px;
+
+  background: #111827;
+  color: white;
+
+  box-shadow:
+    0 24px 80px rgb(0 0 0 / 40%);
+}
+
+.palette-header {
+  border-bottom: 1px solid #374151;
+}
+
+.breadcrumbs {
+  display: flex;
+  gap: 0.4rem;
+
+  padding: 0.75rem 1rem 0;
+
+  color: #9ca3af;
+
+  font-size: 0.75rem;
+}
+
+.search-input {
+  width: 100%;
+
+  padding: 1rem;
+  margin: 0.5rem 0;
+
+  border: 0;
+  outline: none;
+
+  background: transparent;
+  color: white;
+
+  font-size: 1rem;
+}
+
+.search-input::placeholder {
+  color: #6b7280;
+}
+
+.command-list {
+  max-height: 350px;
+
+  overflow-y: auto;
+
+  padding: 0.5rem;
+}
+
+.command {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  width: 100%;
+
+  padding: 0.75rem;
+
+  border: 0;
+  border-radius: 8px;
+
+  background: transparent;
+  color: white;
+
+  cursor: pointer;
+
+  text-align: left;
+}
+
+.command:hover,
+.command.active {
+  background: #1d4ed8;
+}
+
+.command-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.command-content small {
+  color: #cbd5e1;
+}
+
+.arrow {
+  color: #cbd5e1;
+}
+
+.empty-state {
+  padding: 2rem;
+
+  color: #9ca3af;
+
+  text-align: center;
+}
+
+.palette-footer {
+  display: flex;
+  gap: 1rem;
+
+  padding: 0.6rem 1rem;
+
+  border-top: 1px solid #374151;
+
+  color: #9ca3af;
+
+  font-size: 0.7rem;
+}
+
+/* Open/close animation */
+
+.palette-enter-active,
+.palette-leave-active {
+  transition: opacity 150ms ease;
+}
+
+.palette-enter-active .palette,
+.palette-leave-active .palette {
+  transition:
+    transform 150ms ease,
+    opacity 150ms ease;
+}
+
+.palette-enter-from,
+.palette-leave-to {
+  opacity: 0;
+}
+
+.palette-enter-from .palette,
+.palette-leave-to .palette {
+  transform: translateY(-8px);
+}
