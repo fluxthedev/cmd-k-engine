@@ -446,7 +446,6 @@ export function useCommandPalette() {
     // No submenu to go back from
     if (!menuStack.value.length) {
       close()
-      return
     }
 
     // Remove current submenu
