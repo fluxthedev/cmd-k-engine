@@ -9,46 +9,74 @@ import {
 import type { Command } from '@/types/command'
 
 /**
- * Determines whether a search query "fuzzy matches" some text.
+ * Determines whether a search query "fuzzy matches"
+ * some text.
+ *
+ * We first check for a normal substring match.
  *
  * Example:
  *
- *   query = "acct"
- *   text  = "Account Settings"
+ * query = "dash"
+ * text = "Dashboard"
  *
- * The letters a → c → c → t appear in order,
- * so this returns true.
+ * This is a direct match, so it returns true.
  *
- * They don't need to be next to each other.
+ * If there isn't a direct match, we allow the
+ * characters to appear in order without needing
+ * to be next to each other.
+ *
+ * Example:
+ *
+ * query = "acct"
+ * text = "Account Settings"
+ *
+ * a → c → c → t
+ *
+ * The letters appear in order, so this returns true.
  */
-
 function fuzzyMatch(
   query: string,
   text: string,
 ): boolean {
-  if (!query) {
+  const normalizedQuery = query
+    .trim()
+    .toLowerCase()
+
+  const normalizedText = text.toLowerCase()
+
+  // Empty searches match everything.
+  if (!normalizedQuery) {
     return true
   }
 
-  const normalizedQuery =
-    query.toLowerCase()
+  // Prefer a normal substring match.
+  //
+  // Example:
+  // "dash" → "Dashboard"
+  if (
+    normalizedText.includes(normalizedQuery)
+  ) {
+    return true
+  }
 
-  const normalizedText =
-    text.toLowerCase()
-
+  // If there isn't a direct match,
+  // perform a simple fuzzy subsequence match.
+  //
+  // The letters must appear in order,
+  // but they don't have to be adjacent.
   let queryIndex = 0
 
   for (
-    let i = 0;
-    i < normalizedText.length;
-    i++
+    const character of normalizedText
   ) {
     if (
-      normalizedText[i] ===
+      character ===
       normalizedQuery[queryIndex]
     ) {
       queryIndex++
 
+      // We matched every character
+      // in the query.
       if (
         queryIndex ===
         normalizedQuery.length
@@ -65,26 +93,41 @@ function fuzzyMatch(
  * Determines whether a command should appear
  * in the current search results.
  *
- * We search against more than just the label:
+ * IMPORTANT:
+ *
+ * We search each field independently.
+ *
+ * Fields:
  *
  * - label
  * - description
  * - keywords
  *
- * This means a command can be discovered using
- * words that aren't actually displayed in its title.
+ * We intentionally DON'T combine all of them
+ * into one large string.
+ *
+ * Otherwise a query could accidentally match
+ * by taking one character from the label,
+ * another from the description, and another
+ * from a keyword.
  */
 function commandMatches(
   command: Command,
   query: string,
 ): boolean {
-  const searchText = [
+  if (!query.trim()) {
+    return true
+  }
+
+  const fields = [
     command.label,
     command.description ?? '',
     ...(command.keywords ?? []),
-  ].join(' ')
+  ]
 
-  return fuzzyMatch(query, searchText)
+  return fields.some((field) =>
+    fuzzyMatch(query, field),
+  )
 }
 
 /**
@@ -105,45 +148,26 @@ function commandMatches(
 export function useCommandPalette() {
   /**
    * Whether the palette is currently visible.
-   *
-   * Example:
-   *
-   * false → palette closed
-   * true  → palette open
    */
   const isOpen = ref(false)
 
-
   /**
    * The text currently typed into the search box.
-   *
-   * Example:
-   *
-   * ""
-   * "set"
-   * "dark"
    */
   const query = ref('')
 
   /**
    * All root-level commands registered
    * by the application.
-   *
-   * This starts empty and App.vue can add commands
-   * using palette.register(...).
    */
   const commands = ref<Command[]>([])
 
   /**
    * Which command is currently highlighted.
    *
-   * Example:
-   *
    * 0 = first command
    * 1 = second command
    * 2 = third command
-   *
-   * This is what ArrowUp / ArrowDown change.
    */
   const selectedIndex = ref(0)
 
@@ -162,8 +186,6 @@ export function useCommandPalette() {
    * Inside "Theme -> Colors":
    *
    * [Theme, Colors]
-   *
-   * This lets us implement Backspace navigation.
    */
   const menuStack = ref<Command[]>([])
 
@@ -173,25 +195,20 @@ export function useCommandPalette() {
    *
    * At the root, we return the top-level commands.
    *
-   * Inside a submenu, we return that command's children.
+   * Inside a submenu, we return that command's
+   * children.
    */
   const currentCommands = computed(() => {
     // Get the last item in the menu stack.
-    //
-    // If we're in:
-    //
-    // [Theme, Colors]
-    //
-    // then "Colors" is the current parent.
     const parent =
       menuStack.value[
         menuStack.value.length - 1
       ]
 
-    // If there is a parent, display its children.
+    // If we're inside a submenu, display its
+    // children.
     //
-    // Otherwise we're at the root, so display the
-    // normal top-level commands.
+    // Otherwise display the root commands.
     return parent?.children ??
       commands.value
   })
@@ -199,19 +216,6 @@ export function useCommandPalette() {
   /**
    * Applies the user's search query to the
    * commands we're currently viewing.
-   *
-   * Example:
-   *
-   * currentCommands:
-   *   Settings
-   *   Projects
-   *   Help
-   *
-   * query:
-   *   "set"
-   *
-   * result:
-   *   Settings
    */
   const filteredCommands = computed(() => {
     return currentCommands.value.filter(
@@ -223,22 +227,9 @@ export function useCommandPalette() {
     )
   })
 
-
   /**
    * Converts the selectedIndex number into
    * the actual selected command.
-   *
-   * Example:
-   *
-   * selectedIndex = 1
-   *
-   * filteredCommands = [
-   *   Dashboard,
-   *   Settings,
-   *   Help
-   * ]
-   *
-   * selectedCommand = Settings
    */
   const selectedCommand = computed(() => {
     return filteredCommands.value[
@@ -246,37 +237,29 @@ export function useCommandPalette() {
     ]
   })
 
-   /**
+  /**
    * Creates the breadcrumb labels used by the UI.
    *
    * Example:
    *
-   * menuStack:
-   *   [Theme, Colors]
+   * [Theme, Colors]
    *
-   * breadcrumbs:
-   *   ["Theme", "Colors"]
+   * becomes:
    *
-   * The component can render:
-   *
-   *   Commands / Theme / Colors
+   * ["Theme", "Colors"]
    */
-
   const breadcrumbs = computed(() => {
     return menuStack.value.map(
       (command) => command.label,
     )
   })
 
-    /**
+  /**
    * Adds a new command to the palette.
    *
-   * We use the command's ID as its unique identity.
-   *
-   * If a command with that ID already exists,
+   * If a command with the same ID already exists,
    * replace it instead of creating a duplicate.
    */
-
   function register(command: Command) {
     const existingIndex =
       commands.value.findIndex(
@@ -297,10 +280,6 @@ export function useCommandPalette() {
 
   /**
    * Removes a command by ID.
-   *
-   * Example:
-   *
-   * palette.unregister('settings')
    */
   function unregister(id: string) {
     commands.value =
@@ -313,18 +292,24 @@ export function useCommandPalette() {
   /**
    * Opens the palette.
    *
-   * We reset the navigation state every time
-   * the palette opens so the user starts fresh.
+   * Every time the palette opens,
+   * we start from a clean state.
    */
   function open() {
     isOpen.value = true
     reset()
   }
 
+  /**
+   * Closes the palette.
+   */
   function close() {
     isOpen.value = false
   }
 
+  /**
+   * Toggles the palette open/closed.
+   */
   function toggle() {
     if (isOpen.value) {
       close()
@@ -338,7 +323,7 @@ export function useCommandPalette() {
    *
    * This does NOT remove registered commands.
    *
-   * It only resets:
+   * It resets:
    *
    * - search text
    * - selected item
@@ -350,15 +335,12 @@ export function useCommandPalette() {
     menuStack.value = []
   }
 
-   /**
+  /**
    * Moves the highlighted command down.
    *
    * Example:
    *
    * 0 → 1 → 2 → 0
-   *
-   * The modulo operator (%) makes navigation
-   * wrap back to the beginning.
    */
   function moveDown() {
     const count =
@@ -379,8 +361,6 @@ export function useCommandPalette() {
    * Example:
    *
    * 2 → 1 → 0 → 2
-   *
-   * Again, modulo lets us wrap around.
    */
   function moveUp() {
     const count =
@@ -401,75 +381,97 @@ export function useCommandPalette() {
    * There are two possible behaviors:
    *
    * 1. The command has children
-   *    → enter the submenu.
+   * → enter the submenu.
    *
    * 2. The command has an action
-   *    → execute it and close the palette.
+   * → execute it and close the palette.
    */
   function enter() {
     const command =
       selectedCommand.value
 
-    // Nothing selected
     if (!command) {
       return
     }
 
     /**
-     * If the command has children, it isn't
-     * an action we execute yet.
-     *
-     * Instead, move into that submenu.
+     * If the command has children,
+     * enter that submenu.
      */
     if (command.children?.length) {
       menuStack.value.push(command)
+
+      // Clear the search when entering
+      // a new submenu.
       query.value = ''
+
+      // Start at the first item.
       selectedIndex.value = 0
+
       return
     }
 
     /**
-     * Otherwise this is a normal command.
-     *
-     * action() may be synchronous or async,
-     * so we don't care which one it is here.
+     * Otherwise execute the command.
      */
     if (command.action) {
       void command.action()
-      // The palette is no longer needed
-      // after executing a command.
+
       close()
     }
   }
 
+  /**
+   * Goes back one level in the menu hierarchy.
+   *
+   * IMPORTANT:
+   *
+   * Backspace should NOT close the palette.
+   *
+   * If we're already at the root, simply
+   * do nothing.
+   */
   function back() {
-    // No submenu to go back from
-    if (menuStack.value.length === 0) {
+    // Already at the root.
+    //
+    // Escape is responsible for closing
+    // the palette.
+    if (
+      menuStack.value.length === 0
+    ) {
       return
     }
 
-    // Remove current submenu
+    // Remove the current submenu.
     menuStack.value.pop()
 
-    // Clear any search from submenu
+    // Clear the submenu search.
     query.value = ''
 
-    // Start the previous menu at it's first item
+    // Start at the first command
+    // in the previous menu.
     selectedIndex.value = 0
   }
 
-  /** 
-   * Global keyboard handler
-   * 
-   * This is intentionally inside the composable keyboard behavior is part of the 
-   * logic and not UI
+  /**
+   * Global keyboard handler.
+   *
+   * Keeping keyboard behavior here means
+   * the UI component doesn't need to know
+   * how the palette works internally.
    */
-
   function handleKeydown(
     event: KeyboardEvent,
   ) {
-
-    // Determines whether we are on MacOS, Mac is cmd and Linux/Windows is ctrl
+    /**
+     * Determine whether the user is on macOS.
+     *
+     * Mac:
+     * Cmd + K
+     *
+     * Windows/Linux:
+     * Ctrl + K
+     */
     const modifier =
       /Mac|iPhone|iPad|iPod/i.test(
         navigator.platform,
@@ -477,23 +479,32 @@ export function useCommandPalette() {
         ? event.metaKey
         : event.ctrlKey
 
+    /**
+     * Cmd/Ctrl + K
+     *
+     * Toggle the command palette.
+     */
     if (
       modifier &&
       event.key.toLowerCase() === 'k'
     ) {
-      // Prevent the browser from handling the keyboard shortcut
       event.preventDefault()
       toggle()
+
       return
     }
 
-
-    //If modal isn't open then the other keyboard commands shouldn't be handled
+    /**
+     * Don't process the remaining keyboard
+     * commands if the palette isn't open.
+     */
     if (!isOpen.value) {
       return
     }
 
-    // Once open, map standard keyboard controls to our state functionns, this prevents the browser to control the keys pressed
+    /**
+     * Handle keyboard navigation.
+     */
     switch (event.key) {
       case 'Escape':
         event.preventDefault()
@@ -510,55 +521,86 @@ export function useCommandPalette() {
         moveUp()
         break
 
-      // Execute selected command or enter its submenu
       case 'Enter':
         event.preventDefault()
         enter()
         break
 
       case 'Backspace':
+        /**
+         * Only use Backspace for navigation
+         * when the search field is empty.
+         *
+         * If the user has typed something,
+         * Backspace should behave normally and
+         * delete the character.
+         */
         if (!query.value) {
           event.preventDefault()
           back()
         }
+
         break
     }
   }
 
   /**
-   * Make sure the seleced index remains valid whenever the filtering list changes.
-   * 
+   * Whenever the search query changes,
+   * return the selection to the first result.
+   *
    * Example:
-   * 
-  *    Before Searching: 
-  * 
-  *    Dashboard
-  *    Settings
-  *    Help      <-- Selected index = 2
-  * 
-  *    User searches "set"
-  * 
-  *    There is no longer an index of 2
-  * 
-  *    The watcher moves the selection back to a valid index
+   *
+   * Before:
+   *
+   * Dashboard
+   * Settings
+   * Help <-- selected
+   *
+   * User types:
+   *
+   * "set"
+   *
+   * Results:
+   *
+   * Settings
+   *
+   * We want Settings to become selected.
+   */
+  watch(query, () => {
+    selectedIndex.value = 0
+  })
+
+  /**
+   * Make sure selectedIndex always points
+   * to a valid result.
+   *
+   * This protects us when filtering causes
+   * the number of results to shrink.
    */
   watch(
     filteredCommands,
     () => {
       if (
+        filteredCommands.value.length === 0
+      ) {
+        selectedIndex.value = 0
+
+        return
+      }
+
+      if (
         selectedIndex.value >=
         filteredCommands.value.length
       ) {
-        selectedIndex.value = Math.max(
-          filteredCommands.value.length - 1,
-          0,
-        )
+        selectedIndex.value = 0
       }
     },
   )
 
-
-  // Look for keyboard events when the component is mounted
+  /**
+   * Start listening for global keyboard events
+   * when the composable is mounted.
+   */
   onMounted(() => {
     window.addEventListener(
       'keydown',
@@ -566,7 +608,13 @@ export function useCommandPalette() {
     )
   })
 
-  // stop looking when it is unmounted
+  /**
+   * Clean up the event listener when the
+   * component using this composable is removed.
+   *
+   * This prevents memory leaks and duplicate
+   * keyboard handlers.
+   */
   onUnmounted(() => {
     window.removeEventListener(
       'keydown',
