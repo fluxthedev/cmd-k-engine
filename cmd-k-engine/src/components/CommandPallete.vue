@@ -1,76 +1,69 @@
 <script setup lang="ts">
-    import {
-    nextTick,
-    ref,
-    watch,
-    } from 'vue'
+import {
+  nextTick,
+  ref,
+  watch,
+} from 'vue'
 
-    import {
-    useCommandPalette,
-    } from '@/composables/useCommandPalette'
+import {
+  useCommandPalette,
+} from '@/composables/useCommandPalette'
 
-    type CommandPalette =
-    ReturnType<typeof useCommandPalette>
+import CommandBreadcrumbs from '@/components/CommandBreadcrumbs.vue'
+import CommandFooter from '@/components/CommandFooter.vue'
+import CommandList from '@/components/CommandList.vue'
 
-    const props = defineProps<{
-    palette: CommandPalette
-    }>()
+type CommandPalette =
+  ReturnType<typeof useCommandPalette>
 
-    const searchInput =
-    ref<HTMLInputElement | null>(null)
+const props = defineProps<{
+  palette: CommandPalette
+}>()
 
-    /**
-     * Whenever the palette opens, automatically
-     * put the user's cursor in the search box.
-     */
-    watch(
-    () => props.palette.isOpen.value,
-    async (isOpen) => {
-        if (!isOpen) {
-        return
-        }
+const searchInput =
+  ref<HTMLInputElement | null>(null)
 
-        await nextTick()
-
-        searchInput.value?.focus()
-    },
-    )
-
-    /**
-     * Handles keyboard events specifically from
-     * the search input.
-     *
-     * Backspace has special behavior:
-     * if the search is already empty, go back
-     * one level in the menu hierarchy.
-     */
-    function handleInputKeydown(
-    event: KeyboardEvent,
-    ) {
-    if (
-        event.key === 'Backspace' &&
-        !props.palette.query.value
-    ) {
-        event.preventDefault()
-
-        props.palette.back()
-    }
+/**
+ * Whenever the palette opens,
+ * automatically focus the search input.
+ */
+watch(
+  () => props.palette.isOpen.value,
+  async (isOpen) => {
+    if (!isOpen) {
+      return
     }
 
-    /**
-     * Handles clicking a command.
-     *
-     * We update the selected index first so that
-     * enter() knows which command was clicked.
-     */
-    function selectCommand(
-    index: number,
-        ) {
-        props.palette.selectedIndex.value =
-            index
+    await nextTick()
 
-        props.palette.enter()
-    }
+    searchInput.value?.focus()
+  },
+)
+
+/**
+ * Handle selecting a command from the list.
+ *
+ * We update the selected index first,
+ * then let the composable handle execution
+ * or entering a submenu.
+ */
+function selectCommand(index: number) {
+  props.palette.selectedIndex.value =
+    index
+
+  props.palette.enter()
+}
+
+/**
+ * Handle hovering over a command.
+ *
+ * This keeps mouse and keyboard selection
+ * synchronized.
+ */
+function hoverCommand(index: number) {
+  props.palette.selectedIndex.value =
+    index
+}
 </script>
 
 <template>
@@ -87,24 +80,13 @@
           aria-modal="true"
           aria-label="Command palette"
         >
-          <!-- Search area -->
+          <!-- Breadcrumb + Search -->
           <header class="palette-header">
-            <div class="breadcrumbs">
-              <span>Commands</span>
-
-              <template
-                v-for="breadcrumb in palette.breadcrumbs.value"
-                :key="breadcrumb"
-              >
-                <span aria-hidden="true">
-                  /
-                </span>
-
-                <span>
-                  {{ breadcrumb }}
-                </span>
-              </template>
-            </div>
+            <CommandBreadcrumbs
+              :breadcrumbs="
+                palette.breadcrumbs.value
+              "
+            />
 
             <input
               ref="searchInput"
@@ -117,83 +99,23 @@
               role="combobox"
               aria-autocomplete="list"
               aria-controls="command-list"
-              @keydown="handleInputKeydown"
             />
           </header>
 
           <!-- Command results -->
-          <div
-            id="command-list"
-            class="command-list"
-            role="listbox"
-            aria-label="Commands"
-          >
-            <div
-              v-if="
-                !palette.filteredCommands.value.length
-              "
-              class="empty-state"
-            >
-              No commands found.
-            </div>
-
-            <button
-              v-for="(
-                command,
-                index
-              ) in palette.filteredCommands.value"
-              :key="command.id"
-              type="button"
-              class="command"
-              :class="{
-                active:
-                  palette.selectedIndex.value ===
-                  index,
-              }"
-              role="option"
-              :aria-selected="
-                palette.selectedIndex.value ===
-                index
-              "
-              @mouseenter="
-                palette.selectedIndex.value =
-                  index
-              "
-              @click="
-                selectCommand(index)
-              "
-            >
-              <span class="command-content">
-                <strong>
-                  {{ command.label }}
-                </strong>
-
-                <small
-                  v-if="command.description"
-                >
-                  {{ command.description }}
-                </small>
-              </span>
-
-              <!-- Show an arrow if this command
-                   opens a submenu. -->
-              <span
-                v-if="command.children?.length"
-                class="arrow"
-                aria-hidden="true"
-              >
-                →
-              </span>
-            </button>
-          </div>
+          <CommandList
+            :commands="
+              palette.filteredCommands.value
+            "
+            :selected-index="
+              palette.selectedIndex.value
+            "
+            @select="selectCommand"
+            @hover="hoverCommand"
+          />
 
           <!-- Keyboard help -->
-          <footer class="palette-footer">
-            <span>↑ ↓ Navigate</span>
-            <span>Enter Select</span>
-            <span>Esc Close</span>
-            <span>⌫ Back</span>
-          </footer>
+          <CommandFooter />
         </section>
       </div>
     </Transition>
