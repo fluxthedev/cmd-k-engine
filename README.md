@@ -4,8 +4,6 @@ A production-minded command palette engine built with **Vue 3 and TypeScript**, 
 
 **Live Demo:** https://fluxthedev.github.io/cmd-k-engine/
 
-**Repository:** https://github.com/fluxthedev/cmd-k-engine
-
 ---
 
 ## Overview
