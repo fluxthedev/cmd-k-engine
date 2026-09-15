@@ -1,0 +1,58 @@
+import { CommandPalette } from './components/react/CommandPalette'
+import { useCommandPalette } from './hooks/useCommandPalette'
+
+export default function App() {
+  const palette = useCommandPalette()
+
+  palette.register({
+    id: 'navigation',
+    label: 'Navigation',
+    description: 'Move around the application',
+    keywords: ['navigate', 'pages'],
+    children: [
+      { id: 'navigation.dashboard', label: 'Dashboard', description: 'Open your dashboard', action: () => window.alert('Opening dashboard') },
+      { id: 'navigation.projects', label: 'Projects', description: 'View projects', action: () => window.alert('Opening projects') },
+    ],
+  })
+
+  palette.register({
+    id: 'theme',
+    label: 'Change Theme',
+    description: 'Change appearance',
+    keywords: ['dark', 'light', 'appearance'],
+    children: [
+      { id: 'theme.light', label: 'Light Mode', action: () => window.alert('Light mode') },
+      { id: 'theme.dark', label: 'Dark Mode', action: () => window.alert('Dark mode') },
+    ],
+  })
+
+  palette.register({
+    id: 'settings',
+    label: 'Settings',
+    description: 'Open application settings',
+    keywords: ['preferences', 'account'],
+    action: () => window.alert('Opening settings'),
+  })
+
+  palette.register({
+    id: 'help',
+    label: 'Search Help',
+    description: 'Search the documentation',
+    keywords: ['docs', 'documentation'],
+    action: () => window.alert('Opening help'),
+  })
+
+  return (
+    <main className="app">
+      <div className="hero">
+        <p className="eyebrow">React 19 + TypeScript</p>
+        <h1>Cmd+K Command Palette</h1>
+        <p>
+          Press <kbd>⌘ K</kbd> on Mac or <kbd>Ctrl K</kbd> on Windows/Linux.
+        </p>
+        <button type="button" onClick={palette.open}>Open Command Palette</button>
+      </div>
+      <CommandPalette palette={palette} />
+    </main>
+  )
+}
