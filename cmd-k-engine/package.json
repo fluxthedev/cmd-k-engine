@@ -1,53 +1,31 @@
 {
-  "name": "cmk-k-engine",
-  "version": "0.0.0",
+  "name": "cmd-k-engine-react",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "run-p type-check \"build-only {@}\" --",
+    "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test:e2e": "playwright test",
-    "build-only": "vite build",
-    "type-check": "vue-tsc --build",
-    "format": "oxfmt src/"
+    "type-check": "tsc --noEmit",
+    "format": "prettier --write src/"
   },
   "dependencies": {
-    "pinia": "^4.0.2",
-    "vue": "rc",
-    "vue-router": "^5.2.0"
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
-    "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.13.3",
-    "@vitejs/plugin-vue": "^6.0.8",
-    "@vitejs/plugin-vue-jsx": "^5.1.6",
-    "@vue/tsconfig": "^0.9.1",
-    "npm-run-all2": "^9.0.2",
-    "oxfmt": "^0.59.0",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^5.0.2",
     "prettier": "^3.9.6",
     "typescript": "~6.0.0",
-    "vite": "^8.1.5",
-    "vite-plugin-vue-devtools": "^8.1.5",
-    "vue-tsc": "^3.3.7"
+    "vite": "^8.1.5"
   },
   "engines": {
     "node": "^22.18.0 || >=24.12.0"
-  },
-  "overrides": {
-    "vue": "rc",
-    "@vue/compiler-core": "rc",
-    "@vue/compiler-dom": "rc",
-    "@vue/compiler-sfc": "rc",
-    "@vue/compiler-ssr": "rc",
-    "@vue/compiler-vapor": "rc",
-    "@vue/reactivity": "rc",
-    "@vue/runtime-core": "rc",
-    "@vue/runtime-dom": "rc",
-    "@vue/runtime-vapor": "rc",
-    "@vue/server-renderer": "rc",
-    "@vue/shared": "rc",
-    "@vue/compat": "rc"
   }
 }
