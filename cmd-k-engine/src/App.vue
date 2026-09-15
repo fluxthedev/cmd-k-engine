@@ -1,1 +1,0 @@
-// Replaced by src/App.tsx during the React conversion.
